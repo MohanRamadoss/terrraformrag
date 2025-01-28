@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-okaidia.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar-brand { font-size: 1.5rem; font-weight: bold; }
+        .content-section { margin-bottom: 20px; }
+        .section-title { font-size: 1.25rem; font-weight: bold; }
+        .diagram { background: #282c34; color: #fff; padding: 20px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">Terraform Code Generator</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/documentation">Documentation</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-3">
+                <div class="list-group">
+                    <a href="#requirements" class="list-group-item list-group-item-action">Requirements</a>
+                    <a href="#system-architecture" class="list-group-item list-group-item-action">System Architecture</a>
+                    <a href="#functional-flow" class="list-group-item list-group-item-action">Functional Flow</a>
+                    <a href="#key-components" class="list-group-item list-group-item-action">Key Components</a>
+                    <a href="#usage" class="list-group-item list-group-item-action">Usage</a>
+                    <a href="#error-handling" class="list-group-item list-group-item-action">Error Handling</a>
+                    <a href="#data-flow" class="list-group-item list-group-item-action">Data Flow</a>
+                    <a href="#best-practices" class="list-group-item list-group-item-action">Best Practices</a>
+                    <a href="#maintenance" class="list-group-item list-group-item-action">Maintenance</a>
+                    <a href="#security-notes" class="list-group-item list-group-item-action">Security Notes</a>
+                </div>
+            </div>
+            <div class="col-lg-9">
+                <div id="requirements" class="content-section">
+                    <h2 class="section-title">Requirements</h2>
+                    <p>### Python Packages</p>
+                    <pre><code>pip install -r requirements.txt</code></pre>
+                    <p>Required packages:</p>
+                    <ul>
+                        <li>Flask==2.0.1</li>
+                        <li>Flask-Limiter==3.1.0</li>
+                        <li>Flask-Caching==2.0.0</li>
+                        <li>requests==2.31.0</li>
+                        <li>beautifulsoup4==4.12.2</li>
+                        <li>chromadb==0.4.18</li>
+                        <li>sentence-transformers==2.2.2</li>
+                        <li>ollama==0.1.6</li>
+                        <li>python-dotenv==1.0.0</li>
+                    </ul>
+                    <p>### External Services</p>
+                    <ul>
+                        <li>Ollama server running at http://x.x.x.x:11434</li>
+                        <li>Supported LLM models:
+                            <ul>
+                                <li>granite-code:20b (preferred)</li>
+                                <li>deepseek-r1:14b (alternative)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <div id="system-architecture" class="content-section">
+                    <h2 class="section-title">System Architecture</h2>
+                    <div class="diagram">
+                        <pre>
+                                    ┌─────────────────┐
+                                    │  Terraform      │
+                                    │  Registry Docs  │
+                                    └────────┬────────┘
+                                            │
+                                            ▼
+┌─────────────┐    ┌──────────────┐    ┌────────┐    ┌──────────────┐
+│   Web UI    │◄──►│  Flask App   │◄──►│  RAG   │◄──►│ ChromaDB     │
+│  (Browser)  │    │  (Backend)   │    │ Engine │    │ (Embeddings) │
+└─────────────┘    └──────┬───────┘    └────┬───┘    └──────────────┘
+                          │                  │
+                          ▼                  ▼
+                   ┌──────────────┐    ┌──────────────┐
+                   │    Query     │    │    Ollama    │
+                   │   History    │    │    Server    │
+                   └──────────────┘    └──────────────┘
+                        </pre>
+                    </div>
+                </div>
+
+                <div id="functional-flow" class="content-section">
+                    <h2 class="section-title">Functional Flow</h2>
+                    <ol>
+                        <li><strong>Data Initialization</strong>
+                            <ul>
+                                <li>Scrapes Terraform Registry documentation</li>
+                                <li>Processes text into chunks</li>
+                                <li>Stores embeddings in ChromaDB</li>
+                                <li>Initializes available LLM models</li>
+                            </ul>
+                        </li>
+                        <li><strong>User Query Processing</strong>
+                            <ul>
+                                <li>User submits query through web interface</li>
+                                <li>System performs either:
+                                    <ul>
+                                        <li>Keyword-based search</li>
+                                        <li>Semantic search using ChromaDB</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <li><strong>Code Generation</strong>
+                            <ul>
+                                <li>Relevant context is retrieved</li>
+                                <li>Context + query sent to LLM</li>
+                                <li>Code is generated with retry logic</li>
+                                <li>Response is cleaned and formatted</li>
+                            </ul>
+                        </li>
+                        <li><strong>History Management</strong>
+                            <ul>
+                                <li>Successful queries are saved</li>
+                                <li>Includes timestamp, query, response</li>
+                                <li>Accessible through web interface</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+
+                <div id="key-components" class="content-section">
+                    <h2 class="section-title">Key Components</h2>
+                    <ul>
+                        <li><strong>RAG Utils (`rag_utils.py`)</strong>
+                            <ul>
+                                <li>Handles document scraping</li>
+                                <li>Manages text chunking</li>
+                                <li>Interfaces with ChromaDB</li>
+                                <li>Provides search functionality</li>
+                            </ul>
+                        </li>
+                        <li><strong>Ollama Utils (`ollama_utils.py`)</strong>
+                            <ul>
+                                <li>Manages LLM interactions</li>
+                                <li>Handles model selection</li>
+                                <li>Implements retry logic</li>
+                                <li>Formats prompts</li>
+                            </ul>
+                        </li>
+                        <li><strong>Flask App (`app.py`)</strong>
+                            <ul>
+                                <li>Web server implementation</li>
+                                <li>Route handling</li>
+                                <li>Rate limiting</li>
+                                <li>Caching</li>
+                                <li>Error handling</li>
+                            </ul>
+                        </li>
+                        <li><strong>Web Interface (`templates/index.html`)</strong>
+                            <ul>
+                                <li>User interface</li>
+                                <li>Code display</li>
+                                <li>Model selection</li>
+                                <li>Search type toggle</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <div id="usage" class="content-section">
+                    <h2 class="section-title">Usage</h2>
+                    <ol>
+                        <li><strong>Start the Application</strong>
+                            <pre><code>python app.py</code></pre>
+                        </li>
+                        <li><strong>Access the Interface</strong>
+                            <p>Open browser to <code>http://localhost:5000</code></p>
+                        </li>
+                        <li><strong>Generate Code</strong>
+                            <ul>
+                                <li>Enter Terraform requirements</li>
+                                <li>Select model and search type</li>
+                                <li>Click "Generate Code"</li>
+                            </ul>
+                        </li>
+                        <li><strong>View Results</strong>
+                            <ul>
+                                <li>Generated code appears in code box</li>
+                                <li>Relevant context shown below</li>
+                                <li>Recent queries visible in sidebar</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+
+                <div id="error-handling" class="content-section">
+                    <h2 class="section-title">Error Handling</h2>
+                    <ul>
+                        <li>Rate limiting: 100 requests per day, 10 per minute</li>
+                        <li>Model fallback if preferred model unavailable</li>
+                        <li>Retry logic for API calls</li>
+                        <li>Comprehensive error logging</li>
+                    </ul>
+                </div>
+
+                <div id="data-flow" class="content-section">
+                    <h2 class="section-title">Data Flow</h2>
+                    <pre><code>Query Input → Text Search → Context Retrieval → LLM Prompt → 
+Code Generation → Response Cleaning → Display</code></pre>
+                </div>
+
+                <div id="best-practices" class="content-section">
+                    <h2 class="section-title">Best Practices</h2>
+                    <ol>
+                        <li><strong>Queries</strong>
+                            <ul>
+                                <li>Be specific about requirements</li>
+                                <li>Include cloud provider</li>
+                                <li>Specify resource types</li>
+                                <li>Mention any special configurations</li>
+                            </ul>
+                        </li>
+                        <li><strong>Model Selection</strong>
+                            <ul>
+                                <li>granite-code:20b: Best for complex infrastructure</li>
+                                <li>deepseek-r1:14b: Good for general Terraform code</li>
+                            </ul>
+                        </li>
+                        <li><strong>Search Types</strong>
+                            <ul>
+                                <li>Keyword: Fast, good for exact matches</li>
+                                <li>Semantic: Better for conceptual queries</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+
+                <div id="maintenance" class="content-section">
+                    <h2 class="section-title">Maintenance</h2>
+                    <ul>
+                        <li>Logs stored in <code>app.log</code></li>
+                        <li>Query history in <code>query_history/</code></li>
+                        <li>ChromaDB data in <code>chroma_db/</code></li>
+                    </ul>
+                </div>
+
+                <div id="security-notes" class="content-section">
+                    <h2 class="section-title">Security Notes</h2>
+                    <ul>
+                        <li>Rate limiting prevents abuse</li>
+                        <li>Input validation implemented</li>
+                        <li>Error messages sanitized</li>
+                        <li>API endpoints protected</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-hcl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        document.getElementById('generateForm').addEventListener('submit', function() {
+            document.querySelector('.spinner-overlay').style.display = 'flex';
+        });
+
+        // Initialize Select2 for better dropdowns
+        $(document).ready(function() {
+            $('#model_select').select2();
+            $('#search_type').select2();
+        });
+    </script>
+</body>
+</html>

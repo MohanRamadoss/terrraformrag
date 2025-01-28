@@ -1,0 +1,93 @@
+2025-01-28 13:50:04,222 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.24:5000
+2025-01-28 13:50:04,223 - INFO - [33mPress CTRL+C to quit[0m
+2025-01-28 13:50:04,223 - INFO -  * Restarting with stat
+2025-01-28 13:50:13,027 - WARNING -  * Debugger is active!
+2025-01-28 13:50:13,030 - INFO -  * Debugger PIN: 495-144-571
+2025-01-28 13:50:13,280 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 404 Not Found"
+2025-01-28 13:50:13,281 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using semantic search
+2025-01-28 13:50:13,286 - INFO - 127.0.0.1 - - [28/Jan/2025 13:50:13] "POST / HTTP/1.1" 200 -
+2025-01-28 13:50:17,574 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 404 Not Found"
+2025-01-28 13:50:17,575 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using semantic search
+2025-01-28 13:50:17,576 - INFO - 127.0.0.1 - - [28/Jan/2025 13:50:17] "POST / HTTP/1.1" 200 -
+2025-01-28 13:50:18,573 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 404 Not Found"
+2025-01-28 13:50:18,574 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using semantic search
+2025-01-28 13:50:18,575 - INFO - 127.0.0.1 - - [28/Jan/2025 13:50:18] "POST / HTTP/1.1" 200 -
+2025-01-28 13:50:21,621 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 404 Not Found"
+2025-01-28 13:50:21,622 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using semantic search
+2025-01-28 13:50:21,623 - INFO - 127.0.0.1 - - [28/Jan/2025 13:50:21] "POST / HTTP/1.1" 200 -
+2025-01-28 13:50:22,562 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 404 Not Found"
+2025-01-28 13:50:22,563 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using semantic search
+2025-01-28 13:50:22,564 - INFO - 127.0.0.1 - - [28/Jan/2025 13:50:22] "POST / HTTP/1.1" 200 -
+2025-01-28 13:50:35,864 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 404 Not Found"
+2025-01-28 13:50:35,866 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using keyword search
+2025-01-28 13:50:35,867 - INFO - 127.0.0.1 - - [28/Jan/2025 13:50:35] "POST / HTTP/1.1" 200 -
+2025-01-28 13:52:36,060 - INFO -  * Detected change in '/home/mohan/aiproject/visaaicodecraft/rag/terraform_rag_web/rag_utils.py', reloading
+2025-01-28 13:52:37,405 - INFO -  * Restarting with stat
+2025-01-28 13:52:45,743 - WARNING -  * Debugger is active!
+2025-01-28 13:52:45,747 - INFO -  * Debugger PIN: 495-144-571
+2025-01-28 13:52:45,863 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:52:45,864 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using keyword search
+2025-01-28 13:52:45,875 - INFO - 127.0.0.1 - - [28/Jan/2025 13:52:45] "POST / HTTP/1.1" 200 -
+2025-01-28 13:53:01,638 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.24:5000
+2025-01-28 13:53:01,638 - INFO - [33mPress CTRL+C to quit[0m
+2025-01-28 13:53:01,639 - INFO -  * Restarting with stat
+2025-01-28 13:53:09,967 - WARNING -  * Debugger is active!
+2025-01-28 13:53:09,970 - INFO -  * Debugger PIN: 495-144-571
+2025-01-28 13:53:10,153 - INFO - 127.0.0.1 - - [28/Jan/2025 13:53:10] "[35m[1mPOST / HTTP/1.1[0m" 500 -
+2025-01-28 13:53:10,193 - INFO - 127.0.0.1 - - [28/Jan/2025 13:53:10] "GET /?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1" 200 -
+2025-01-28 13:53:10,249 - INFO - 127.0.0.1 - - [28/Jan/2025 13:53:10] "GET /?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1" 200 -
+2025-01-28 13:53:10,379 - INFO - 127.0.0.1 - - [28/Jan/2025 13:53:10] "GET /?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 200 -
+2025-01-28 13:53:10,461 - INFO - 127.0.0.1 - - [28/Jan/2025 13:53:10] "[36mGET /?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1[0m" 304 -
+2025-01-28 13:54:24,952 - INFO -  * Detected change in '/home/mohan/aiproject/visaaicodecraft/rag/terraform_rag_web/rag_utils.py', reloading
+2025-01-28 13:54:26,121 - INFO -  * Restarting with stat
+2025-01-28 13:54:34,381 - WARNING -  * Debugger is active!
+2025-01-28 13:54:34,385 - INFO -  * Debugger PIN: 495-144-571
+2025-01-28 13:56:10,652 - INFO -  * Detected change in '/home/mohan/aiproject/visaaicodecraft/rag/terraform_rag_web/app.py', reloading
+2025-01-28 13:56:11,946 - INFO -  * Restarting with stat
+2025-01-28 13:56:25,196 - INFO - HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2025-01-28 13:56:25,206 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.24:5000
+2025-01-28 13:56:25,206 - INFO - [33mPress CTRL+C to quit[0m
+2025-01-28 13:56:25,207 - INFO -  * Restarting with stat
+2025-01-28 13:56:33,857 - INFO - HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2025-01-28 13:56:33,864 - WARNING -  * Debugger is active!
+2025-01-28 13:56:33,868 - INFO -  * Debugger PIN: 495-144-571
+2025-01-28 13:56:33,915 - INFO - HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2025-01-28 13:56:33,941 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:33,981 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:34,015 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:34,016 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using keyword search
+2025-01-28 13:56:34,025 - INFO - 127.0.0.1 - - [28/Jan/2025 13:56:34] "POST / HTTP/1.1" 200 -
+2025-01-28 13:56:38,883 - INFO - HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2025-01-28 13:56:38,909 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:38,931 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:38,974 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:38,975 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using keyword search
+2025-01-28 13:56:38,976 - INFO - 127.0.0.1 - - [28/Jan/2025 13:56:38] "POST / HTTP/1.1" 200 -
+2025-01-28 13:56:39,688 - INFO - HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2025-01-28 13:56:39,709 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:39,731 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:39,756 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:39,757 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using keyword search
+2025-01-28 13:56:39,760 - INFO - 127.0.0.1 - - [28/Jan/2025 13:56:39] "POST / HTTP/1.1" 200 -
+2025-01-28 13:56:40,281 - INFO - HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2025-01-28 13:56:40,300 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:40,318 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:40,347 - INFO - HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 500 Internal Server Error"
+2025-01-28 13:56:40,348 - INFO - Successful query: "Create an AWS EC2 instance with t2.micro type, running Amazon Linux 2, with security group allowing SSH access from my IP only, and tag it with environment=development" using keyword search
+2025-01-28 13:56:40,349 - INFO - 127.0.0.1 - - [28/Jan/2025 13:56:40] "POST / HTTP/1.1" 200 -
+2025-01-28 13:59:55,887 - INFO -  * Detected change in '/home/mohan/aiproject/visaaicodecraft/rag/terraform_rag_web/ollama_utils.py', reloading
+2025-01-28 13:59:57,053 - INFO -  * Restarting with stat
+2025-01-28 14:00:06,800 - INFO - HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+2025-01-28 14:00:06,807 - WARNING -  * Debugger is active!
+2025-01-28 14:00:06,811 - INFO -  * Debugger PIN: 495-144-571
+2025-01-28 14:00:08,978 - INFO -  * Detected change in '/home/mohan/aiproject/visaaicodecraft/rag/terraform_rag_web/app.py', reloading
+2025-01-28 14:00:10,343 - INFO -  * Restarting with stat
