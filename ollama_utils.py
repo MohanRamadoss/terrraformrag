@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Update Ollama API configuration to use the remote server
-OLLAMA_API_URL = "http://x.xx.xx.xx:11434"
+OLLAMA_API_URL = "http://209.137.198.220:11434"
 logger.info(f"Using remote Ollama server at: {OLLAMA_API_URL}")
 
 class ModelNotAvailableError(Exception):
@@ -75,12 +75,16 @@ def validate_model(model_name: str, available_models: List[str]) -> str:
     return model_name
 
 def generate_code_ollama(query: str, context_chunks: List[str], model_name: str, cloud_provider: str = 'aws') -> str:
-    """Enhanced code generation with better error handling."""
+    """Enhanced code generation with health checks and fallbacks."""
     try:
         logger.info(f"Starting code generation for query: {query}")
         logger.info(f"Using model: {model_name}")
         logger.info(f"Cloud provider: {cloud_provider}")
         
+        # Check server health before proceeding
+        if not check_ollama_connection():
+            raise ModelNotAvailableError("Ollama server is not responding")
+            
         # Validate model availability
         available_models = get_available_models()
         if not available_models:
@@ -94,6 +98,10 @@ def generate_code_ollama(query: str, context_chunks: List[str], model_name: str,
         if is_database_query and cloud_provider.lower() != 'azure':
             logger.info("Database query detected, forcing Azure provider")
             cloud_provider = 'azure'
+        
+        # Limit context size based on query length
+        max_context_tokens = min(8192, 16384 - len(query))
+        context_chunks = context_chunks[:max_context_tokens // 100]  # Rough estimate of tokens per chunk
         
         # Prepare complete prompt with context
         prompt = prepare_model_prompt(query, context_chunks, model_name)
@@ -112,87 +120,161 @@ def generate_code_ollama(query: str, context_chunks: List[str], model_name: str,
         logger.error(f"Code generation error: {str(e)}\nTraceback: {traceback.format_exc()}")
         raise CodeGenerationError(f"Failed to generate code: {str(e)}")
 
-# Add session configuration
+# Update session configuration with longer timeouts
 session = requests.Session()
 retry_strategy = Retry(
-    total=3,
-    backoff_factor=1,
+    total=5,  # Increased from 3
+    backoff_factor=2,  # Increased from 1
     status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "POST"],  # Explicitly allow POST
+    respect_retry_after_header=True
 )
-adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=10)
+adapter = HTTPAdapter(
+    max_retries=retry_strategy,
+    pool_connections=20,  # Increased from 10
+    pool_maxsize=20,     # Increased from 10
+    pool_block=True
+)
 session.mount("http://", adapter)
 session.mount("https://", adapter)
 
-def generate_with_retry(model_name: str, prompt: str, max_retries: int = 3, base_delay: float = 1.0) -> str:
-    """Generate code with improved retry logic and logging."""
+def generate_with_retry(model_name: str, prompt: str, max_retries: int = 5, base_delay: float = 2.0) -> str:
+    """Generate code using the more efficient generate endpoint."""
     last_error = None
     
     for attempt in range(max_retries):
         try:
             logger.info(f"Attempt {attempt + 1} of {max_retries}")
             
-            # Prepare request payload
+            # Add explicit formatting instructions to prompt
+            formatted_prompt = f"{prompt}\n\nPlease provide the complete Terraform code wrapped in ```hcl blocks."
+            
             payload = {
                 "model": model_name,
-                "messages": [{"role": "user", "content": prompt}],
+                "prompt": formatted_prompt,
                 "stream": False,
+                "raw": False,  # Changed to false to get formatted response
                 "options": {
                     "temperature": 0.7,
                     "top_p": 0.9,
-                    "num_ctx": 4096,
-                    "num_predict": 2048,
+                    "num_ctx": 8192,
+                    "num_predict": 4096,
+                    "stop": ["</code>", "```\n"],
+                    "repeat_penalty": 1.1
                 }
             }
             
-            logger.info(f"Sending request to Ollama API: {OLLAMA_API_URL}")
-            response = session.post(  # Use session instead of requests directly
-                f"{OLLAMA_API_URL}/api/chat",
+            logger.info(f"Sending request to Ollama generate API")
+            response = session.post(
+                f"{OLLAMA_API_URL}/api/generate",
                 json=payload,
-                timeout=60  # Increase timeout
+                timeout=(30, 180)
             )
             
-            # Log response status
-            logger.info(f"Ollama API response status: {response.status_code}")
             response.raise_for_status()
+            result = response.json()
             
-            # Parse response
-            try:
-                result = response.json()
-                logger.info("Successfully parsed JSON response")
+            if 'response' in result:
+                content = result['response']
+                logger.info("Received response, cleaning code...")
+                cleaned_code = clean_code_response(content)
+                if cleaned_code:
+                    return cleaned_code
+                raise CodeGenerationError("Failed to extract valid code from response")
+            else:
+                raise CodeGenerationError("Invalid response format from API")
                 
-                if 'message' in result and 'content' in result['message']:
-                    content = result['message']['content']
-                    logger.info("Found content in response")
-                    return clean_code_response(content)
-                else:
-                    raise CodeGenerationError(f"Invalid response format: {result}")
-                    
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON decode error: {str(e)}")
-                content = response.text
-                if content and any(keyword in content.lower() for keyword in ['provider', 'resource', 'terraform']):
-                    return clean_code_response(content)
-                raise CodeGenerationError(f"Failed to parse response: {str(e)}")
-                
-        except requests.exceptions.Timeout as e:
-            logger.error(f"Timeout error on attempt {attempt + 1}: {str(e)}")
-            last_error = e
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Request error on attempt {attempt + 1}: {str(e)}")
-            last_error = e
         except Exception as e:
-            logger.error(f"Unexpected error on attempt {attempt + 1}: {str(e)}")
+            logger.error(f"Error on attempt {attempt + 1}: {str(e)}")
             last_error = e
             
-        if attempt < max_retries - 1:
-            delay = base_delay * (2 ** attempt)
-            logger.warning(f"Retrying in {delay} seconds...")
-            time.sleep(delay)
-            continue
+            # Reduce complexity on retry
+            if 'options' in payload:
+                payload['options']['temperature'] = min(0.9, payload['options']['temperature'] + 0.1)
+                payload['options']['num_ctx'] = max(4096, payload['options']['num_ctx'] - 2048)
+            
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                logger.warning(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+                continue
     
-    error_msg = f"Failed after {max_retries} attempts. Last error: {str(last_error)}"
-    logger.error(error_msg)
-    raise CodeGenerationError(error_msg)
+    raise CodeGenerationError(f"Failed after {max_retries} attempts. Last error: {str(last_error)}")
+
+def clean_code_response(content: str) -> str:
+    """Clean and validate the code response with improved parsing."""
+    # First try to extract code blocks
+    if "```" in content:
+        code_blocks = []
+        lines = content.split("\n")
+        in_code_block = False
+        current_block = []
+        
+        for line in lines:
+            if "```" in line:
+                if not in_code_block and ("hcl" in line.lower() or "terraform" in line.lower()):
+                    in_code_block = True
+                elif in_code_block:
+                    if current_block:  # Only add non-empty blocks
+                        block_content = "\n".join(current_block).strip()
+                        if is_valid_terraform(block_content):
+                            code_blocks.append(block_content)
+                    current_block = []
+                    in_code_block = False
+            elif in_code_block:
+                current_block.append(line)
+        
+        # Handle any remaining block
+        if current_block:
+            block_content = "\n".join(current_block).strip()
+            if is_valid_terraform(block_content):
+                code_blocks.append(block_content)
+        
+        if code_blocks:
+            return "\n\n".join(code_blocks)
+    
+    # If no valid code blocks found, try to validate the entire content
+    if is_valid_terraform(content):
+        return content
+    
+    raise CodeGenerationError("No valid Terraform code found in response")
+
+def is_valid_terraform(content: str) -> bool:
+    """Validate if the content looks like Terraform code."""
+    required_patterns = [
+        r'provider\s+["\w]+\s*{',
+        r'resource\s+["\w]+\s+["\w]+\s*{',
+        r'variable\s+["\w]+\s*{',
+        r'terraform\s*{',
+        r'output\s+["\w]+\s*{'
+    ]
+    
+    content_lower = content.lower()
+    
+    # Check for common Terraform keywords
+    if not any(keyword in content_lower for keyword in ['provider', 'resource', 'variable', 'terraform']):
+        return False
+    
+    # Check for valid HCL syntax patterns
+    import re
+    for pattern in required_patterns:
+        if re.search(pattern, content):
+            return True
+    
+    return False
+
+# Add connection health check
+def check_ollama_connection() -> bool:
+    """Check if Ollama server is responsive."""
+    try:
+        response = session.get(
+            f"{OLLAMA_API_URL}/api/version",
+            timeout=(5, 10)
+        )
+        return response.status_code == 200
+    except Exception as e:
+        logger.error(f"Ollama server health check failed: {e}")
+        return False
 
 def prepare_model_prompt(query: str, context_chunks: List[str], model_name: str) -> str:
     """Prepare model-specific prompts with improved structure."""
@@ -343,10 +425,7 @@ resource "azurerm_postgresql_server" "example" {
 
 def clean_code_response(content: str) -> str:
     """Clean and validate the code response with improved parsing."""
-    if not any(keyword in content.lower() for keyword in ['provider', 'resource', 'data', 'variable', 'output']):
-        raise CodeGenerationError("Generated content does not contain valid Terraform code")
-
-    # Extract code blocks
+    # First try to extract code blocks
     if "```" in content:
         code_blocks = []
         lines = content.split("\n")
@@ -355,14 +434,13 @@ def clean_code_response(content: str) -> str:
         
         for line in lines:
             if "```" in line:
-                if "terraform" in line.lower() or "hcl" in line.lower():
-                    # Start of Terraform code block
+                if not in_code_block and ("hcl" in line.lower() or "terraform" in line.lower()):
                     in_code_block = True
-                    continue
                 elif in_code_block:
-                    # End of code block
-                    if current_block:
-                        code_blocks.append("\n".join(current_block))
+                    if current_block:  # Only add non-empty blocks
+                        block_content = "\n".join(current_block).strip()
+                        if is_valid_terraform(block_content):
+                            code_blocks.append(block_content)
                     current_block = []
                     in_code_block = False
             elif in_code_block:
@@ -370,13 +448,39 @@ def clean_code_response(content: str) -> str:
         
         # Handle any remaining block
         if current_block:
-            code_blocks.append("\n".join(current_block))
+            block_content = "\n".join(current_block).strip()
+            if is_valid_terraform(block_content):
+                code_blocks.append(block_content)
         
         if code_blocks:
             return "\n\n".join(code_blocks)
     
-    # If no code blocks found, return the original content if it looks like Terraform code
-    if any(keyword in content.lower() for keyword in ['provider', 'resource', 'data', 'variable', 'output']):
+    # If no valid code blocks found, try to validate the entire content
+    if is_valid_terraform(content):
         return content
-        
-    raise CodeGenerationError("Could not extract valid Terraform code from response")
+    
+    raise CodeGenerationError("No valid Terraform code found in response")
+
+def is_valid_terraform(content: str) -> bool:
+    """Validate if the content looks like Terraform code."""
+    required_patterns = [
+        r'provider\s+["\w]+\s*{',
+        r'resource\s+["\w]+\s+["\w]+\s*{',
+        r'variable\s+["\w]+\s*{',
+        r'terraform\s*{',
+        r'output\s+["\w]+\s*{'
+    ]
+    
+    content_lower = content.lower()
+    
+    # Check for common Terraform keywords
+    if not any(keyword in content_lower for keyword in ['provider', 'resource', 'variable', 'terraform']):
+        return False
+    
+    # Check for valid HCL syntax patterns
+    import re
+    for pattern in required_patterns:
+        if re.search(pattern, content):
+            return True
+    
+    return False
