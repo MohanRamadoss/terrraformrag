@@ -6,6 +6,7 @@ import logging
 import chromadb
 from chromadb.utils import embedding_functions
 import hashlib
+from typing import List, Optional, Dict, Any  # Add typing imports
 from ollama_utils import (
     get_available_models,
     generate_code_ollama,
@@ -26,9 +27,22 @@ CHUNKS = []
 
 logger.info(f"RAG utils using Ollama API URL: {OLLAMA_API_URL}")
 
-# Website URLs to scrape
-PROVIDER_URL = "https://registry.terraform.io/browse/providers"
-MODULE_URL = "https://registry.terraform.io/browse/modules"
+# Update URL constants
+PROVIDER_URLS = [
+    "https://registry.terraform.io/providers/hashicorp/aws/latest/docs",
+    "https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs",
+    "https://registry.terraform.io/providers/hashicorp/google/latest/docs",
+    "https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs",
+    "https://registry.terraform.io/providers/hashicorp/docker/latest/docs"
+]
+
+MODULE_URLS = [
+    "https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest",
+    "https://registry.terraform.io/modules/Azure/compute/azurerm/latest",
+    "https://registry.terraform.io/modules/terraform-google-modules/network/google/latest",
+    "https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest",
+    "https://registry.terraform.io/modules/terraform-aws-modules/rds/aws/latest"
+]
 
 # Initialize ChromaDB
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
@@ -82,21 +96,95 @@ def update_chroma_db(chunks):
     except Exception as e:
         print(f"Error updating ChromaDB: {e}")
 
-def semantic_search(query, n_results=5):
-    """Perform semantic search using ChromaDB."""
+def semantic_search(query, n_results=10):
+    """Improved semantic search with better relevance filtering."""
     collection = initialize_chroma_collection()
     if not collection:
-        return []
+        logger.warning("ChromaDB collection not available, falling back to keyword search")
+        return retrieve_relevant_chunks(query, CHUNKS, n_results)
     
     try:
         results = collection.query(
             query_texts=[query],
-            n_results=min(n_results, len(collection.get()['ids']))
+            n_results=min(n_results * 2, len(collection.get()['ids']))  # Get more results for filtering
         )
-        return results['documents'][0] if results['documents'] else []
+        
+        if results and 'documents' in results and results['documents']:
+            documents = results['documents'][0]
+            # Enhanced relevance filtering
+            filtered_docs = []
+            for doc in documents:
+                # Check document relevance
+                if len(doc.strip()) > 50:  # Minimum length check
+                    relevance_score = sum(term.lower() in doc.lower() 
+                                        for term in query.lower().split())
+                    if relevance_score > 0:
+                        filtered_docs.append((doc, relevance_score))
+            
+            # Sort by relevance and take top results
+            filtered_docs.sort(key=lambda x: x[1], reverse=True)
+            final_results = [doc for doc, _ in filtered_docs[:n_results]]
+            
+            logger.info(f"Semantic search found {len(final_results)} relevant results")
+            return final_results
+            
+        logger.warning("No semantic search results found")
+        return retrieve_relevant_chunks(query, CHUNKS, n_results)
+        
     except Exception as e:
-        print(f"Error performing semantic search: {e}")
+        logger.error(f"Error in semantic search: {e}")
+        return retrieve_relevant_chunks(query, CHUNKS, n_results)
+
+def retrieve_relevant_chunks(query: str, chunks: List[str], max_results: int = 10) -> List[str]:
+    """Enhanced keyword-based retrieval with improved matching."""
+    if not chunks:
+        logger.warning("No chunks available for search")
         return []
+        
+    # Normalize query and create search terms
+    query_terms = set(query.lower().split())
+    search_terms = set()
+    
+    # Add variations of common terms
+    for term in query_terms:
+        search_terms.add(term)
+        # Add AWS variations
+        if term == 'aws':
+            search_terms.update(['amazon', 'cloudwatch', 'ec2', 's3', 'rds'])
+        # Add Azure variations
+        elif term == 'azure':
+            search_terms.update(['microsoft', 'azurerm', 'app'])
+        # Add common Terraform terms
+        elif term in ['create', 'setup', 'configure']:
+            search_terms.update(['resource', 'module', 'provider'])
+            
+    logger.info(f"Search terms: {search_terms}")
+    scored_chunks = []
+    
+    for chunk in chunks:
+        chunk_lower = chunk.lower()
+        # Calculate relevance score
+        direct_matches = sum(term in chunk_lower for term in query_terms)
+        related_matches = sum(term in chunk_lower for term in search_terms)
+        total_score = (direct_matches * 2) + related_matches
+        
+        if total_score > 0:
+            scored_chunks.append((chunk, total_score))
+    
+    # Log search results
+    logger.info(f"Found {len(scored_chunks)} relevant chunks out of {len(chunks)} total chunks")
+    if not scored_chunks:
+        logger.warning(f"No chunks matched the search terms: {search_terms}")
+    
+    # Sort by relevance score and return top results
+    scored_chunks.sort(key=lambda x: x[1], reverse=True)
+    results = [chunk for chunk, score in scored_chunks[:max_results]]
+    
+    # Log sample of results
+    if results:
+        logger.info(f"Top result preview: {results[0][:200]}...")
+        
+    return results
 
 def scrape_website(url):
     """Scrapes text content from a given URL."""
@@ -112,24 +200,44 @@ def scrape_website(url):
         print(f"Error scraping {url}: {e}")
         return None
 
-def process_data(text_content):
-    """Processes and chunks the scraped text."""
+def process_data(text_content: str) -> List[str]:
+    """Process text into smaller, meaningful chunks."""
     if not text_content:
         return []
-    text_content = " ".join(text_content.split()).strip()
-    chunks = text_content.split("\n\n")
-    if not chunks or len(chunks) < 2:
-        chunks = text_content.split("\n")
+    
+    # Split into sections based on headers
+    sections = []
+    current_section = []
+    lines = text_content.split('\n')
+    
+    for line in lines:
+        if any(line.strip().lower().startswith(header) for header in ['#', 'resource', 'data', 'variable', 'provider']):
+            if current_section:
+                sections.append('\n'.join(current_section))
+            current_section = [line]
+        else:
+            current_section.append(line)
+    
+    if current_section:
+        sections.append('\n'.join(current_section))
+    
+    # Process each section into chunks
+    chunks = []
+    chunk_size = 2000
+    overlap = 200
+    
+    for section in sections:
+        words = section.split()
+        if len(words) < 50:  # Skip very small sections
+            continue
+            
+        for i in range(0, len(words), chunk_size - overlap):
+            chunk = ' '.join(words[i:i + chunk_size])
+            if chunk.strip():
+                chunks.append(chunk)
+    
+    logger.info(f"Processed {len(chunks)} chunks from text content")
     return chunks
-
-def retrieve_relevant_chunks(query, chunks):
-    """Basic keyword-based retrieval."""
-    relevant_chunks = []
-    query_lower = query.lower()
-    for chunk in chunks:
-        if query_lower in chunk.lower():
-            relevant_chunks.append(chunk)
-    return relevant_chunks
 
 def initialize_data():
     """Initialize data by scraping and processing website content."""
@@ -137,9 +245,27 @@ def initialize_data():
     
     try:
         print("Scraping Terraform Registry websites...")
-        provider_content = scrape_website(PROVIDER_URL)
-        module_content = scrape_website(MODULE_URL)
-        ALL_CONTENT = (provider_content or "") + "\n\n" + (module_content or "")
+        all_content = []
+        
+        # Scrape provider documentation
+        for url in PROVIDER_URLS:
+            provider_content = scrape_website(url)
+            if provider_content:
+                all_content.append(provider_content)
+                print(f"Successfully scraped provider URL: {url}")
+            else:
+                print(f"Failed to scrape provider URL: {url}")
+        
+        # Scrape module documentation
+        for url in MODULE_URLS:
+            module_content = scrape_website(url)
+            if module_content:
+                all_content.append(module_content)
+                print(f"Successfully scraped module URL: {url}")
+            else:
+                print(f"Failed to scrape module URL: {url}")
+        
+        ALL_CONTENT = "\n\n".join(all_content)
         CHUNKS = process_data(ALL_CONTENT)
         
         if CHUNKS:
