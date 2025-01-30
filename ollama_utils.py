@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Update Ollama API configuration to use the remote server
-OLLAMA_API_URL = "http://209.137.198.220:11434"
+OLLAMA_API_URL = "http://xxxxxx:11434"
 logger.info(f"Using remote Ollama server at: {OLLAMA_API_URL}")
 
 class ModelNotAvailableError(Exception):
