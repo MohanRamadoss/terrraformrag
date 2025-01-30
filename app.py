@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_caching import Cache
+from functools import wraps  # Add this import
 import logging
 from datetime import datetime
 import json
@@ -19,6 +20,8 @@ import tempfile
 import os
 from models import QueryRequest
 import traceback
+import requests
+from redis import Redis
 
 # Configure logging
 logging.basicConfig(
@@ -34,14 +37,31 @@ app = Flask(__name__, static_folder='static')
 if not CHUNKS:
     print("Warning: No content chunks available. Check if scraping was successful.")
 
-# Configure caching
-cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+# Configure caching with increased limits
+cache = Cache(app, config={
+    'CACHE_TYPE': 'simple',
+    'CACHE_DEFAULT_TIMEOUT': 7200,  # Increased cache timeout
+    'CACHE_THRESHOLD': 1000  # Increased cache entries
+})
 
-# Configure rate limiting
+# Configure response size limits
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Set to 16MB
+
+# Configure Redis for rate limiting
+redis_client = Redis(
+    host='localhost',  # Change this if Redis is on a different host
+    port=6379,
+    db=0,
+    socket_timeout=5
+)
+
+# Update limiter configuration with Redis storage
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["100 per day", "10 per minute"]
+    default_limits=["100 per day", "10 per minute"],
+    storage_uri="redis://localhost:6379",  # Use Redis for storage
+    storage_options={"socket_timeout": 5}
 )
 
 # Create history directory
@@ -53,23 +73,43 @@ AVAILABLE_MODELS = get_available_models()
 if not any(model in AVAILABLE_MODELS for model in ["granite-code:20b", "deepseek-r1:14b", "codestral:latest"]):
     logging.warning("None of the preferred models (granite-code:20b, deepseek-r1:14b, codestral:latest) are available")
 
+# Update app configuration
+app.config.update(
+    PROPAGATE_EXCEPTIONS = True,
+    MAX_CONTENT_LENGTH = 32 * 1024 * 1024,  # Increased to 32MB
+    REQUEST_TIMEOUT = 300  # 5 minutes timeout
+)
+
+# Add timeout handling decorator
+def timeout_handler(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except requests.Timeout:
+            logger.error("Request timed out")
+            return jsonify({
+                'error': 'The request timed out. Please try again with a simpler query or smaller context.'
+            }), 504
+    return wrapper
+
+# Update the generate route to handle pagination
 @app.route('/api/generate', methods=['POST'])
 @limiter.limit("10 per minute")
+@timeout_handler
 def api_generate():
     try:
-        # Validate request data using Pydantic model
         data = QueryRequest(**request.get_json())
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 5000, type=int)  # Increased chunk size
         
-        # Get cloud provider from request or default to AWS
-        cloud_provider = data.cloud_provider
-        
-        # Get relevant context based on search type
+        # Get relevant context with pagination
         if data.search_type == 'semantic':
-            relevant_context = semantic_search(data.query)
+            relevant_context = semantic_search(data.query, n_results=10)  # Increased results
         else:
             relevant_context = retrieve_relevant_chunks(data.query, CHUNKS)
             
-        # Generate code with provider context
+        # Generate code with increased context
         response_code = generate_code_ollama(
             query=data.query,
             context_chunks=relevant_context,
@@ -77,15 +117,20 @@ def api_generate():
             cloud_provider=cloud_provider
         )
         
-        # Validate the generated code
-        is_valid, validation_message = validate_terraform_code(response_code)
+        # Split response for pagination if needed
+        total_length = len(response_code)
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated_code = response_code[start:end]
         
         return jsonify({
-            'code': response_code,
+            'code': paginated_code,
             'context': relevant_context,
-            'validation': {
-                'valid': is_valid,
-                'message': validation_message
+            'pagination': {
+                'total_length': total_length,
+                'current_page': page,
+                'per_page': per_page,
+                'total_pages': (total_length + per_page - 1) // per_page
             }
         })
         
